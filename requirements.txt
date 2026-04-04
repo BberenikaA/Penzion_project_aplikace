@@ -1,3 +1,4 @@
 requests
 icalevents
 streamlit
+gspread

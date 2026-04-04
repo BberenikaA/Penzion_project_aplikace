@@ -1,10 +1,12 @@
 import datetime
 import requests
 import streamlit as st
+import gspread
+
+SPREADSHEET_ID = "18jtecLpZc8FhIxypDJ1LG_E9e5xSYhdyedaR2bwPwFs"
 
 
 class Host:
-
     def __init__(self, jmeno_prijmeni, email, telefon):
         self.jmeno_prijmeni = jmeno_prijmeni
         self.email = email
@@ -12,18 +14,13 @@ class Host:
 
 
 class Rezervace:
-
-    def __init__(
-        self, host, pocet_osob, pocet_noci, datum_prijezdu, datum_odjezdu
-    ):
+    def __init__(self, host, pocet_osob, pocet_noci, datum_prijezdu, datum_odjezdu):
         self.host = host
         self.pocet_osob = pocet_osob
         self.pocet_noci = pocet_noci
         self.datum_prijezdu = datum_prijezdu
         self.datum_odjezdu = datum_odjezdu
-        self.datum_vytvoreni = datetime.datetime.now().strftime(
-            "%d.%m.%Y %H:%M"
-        )
+        self.datum_vytvoreni = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
 
     def vypocti_celkovou_cenu(self):
         cena_za_noc = self.pocet_osob * 450
@@ -31,19 +28,30 @@ class Rezervace:
             cena_za_noc = 8000
         return cena_za_noc * self.pocet_noci
 
-    def uloz_do_souboru(self):
+    def uloz_do_google_tabulky(self):
         celkova_cena = self.vypocti_celkovou_cenu()
-        zapis_hosta = (
-            f"{self.datum_vytvoreni}: {self.host.jmeno_prijmeni} ({self.host.email}), ({self.host.telefon}) - "
-            f"TERMÍN: {self.datum_prijezdu} až {self.datum_odjezdu} , "
-            f"{self.pocet_osob} osob, {self.pocet_noci} nocí, "
-            f"Cena: {celkova_cena} Kč\n"
-        )
         try:
-            with open("rezervace.txt", "a", encoding="utf-8") as soubor:
-                soubor.write(zapis_hosta)
+            service_account_info = st.secrets["gcp_service_account"]
+
+            gc = gspread.service_account_from_dict(service_account_info)
+
+            sh = gc.open_by_key(SPREADSHEET_ID)
+            worksheet = sh.get_worksheet(0)
+
+            worksheet.append_row([
+                self.datum_vytvoreni,
+                self.host.jmeno_prijmeni,
+                self.host.email,
+                self.host.telefon,
+                self.datum_prijezdu,
+                self.datum_odjezdu,
+                self.pocet_osob,
+                self.pocet_noci,
+                f"{celkova_cena} Kč"
+            ])
             return True
-        except IOError:
+        except Exception as e:
+            st.error(f"⚠️ Nepodařilo se uložit do tabulky: {e}")
             return False
 
 
@@ -65,9 +73,7 @@ def ziskej_info_o_pobytu(datum_prijezdu_str):
         odpoved = requests.get(url).json()
         teplota = odpoved["current_weather"]["temperature"]
 
-        return (
-            f"{sezona} (aktuálně v Tanvaldu {teplota}°C). Doporučujeme: {tipy}."
-        )
+        return f"{sezona} (aktuálně v Tanvaldu {teplota}°C). Doporučujeme: {tipy}."
     except:
         return "Informace o počasí a aktivitách nejsou dostupné."
 
@@ -80,9 +86,7 @@ vstup_telefon = st.text_input("Telefon (pouze číslice)")
 vstup_osob = st.number_input(
     "Počet osob (12-22)", min_value=12, max_value=22, value=12
 )
-vstup_noci = st.number_input(
-    "Počet nocí (min. 2)", min_value=2, value=2
-)
+vstup_noci = st.number_input("Počet nocí (min. 2)", min_value=2, value=2)
 vstup_datum = st.text_input("Datum příjezdu (např. 15.01.2026)")
 
 if st.button("Vytvořit rezervaci"):
@@ -107,17 +111,17 @@ if st.button("Vytvořit rezervaci"):
             )
 
             celkova_cena = nova_rezervace.vypocti_celkovou_cenu()
-            soubor_ok = nova_rezervace.uloz_do_souboru()
             pocasí_info = ziskej_info_o_pobytu(vstup_datum)
 
-            st.success("✅ Rezervace byla úspěšně zpracována!")
-            st.write(f"**REZERVAČNÍ SYSTÉM PRO:** {novy_host.jmeno_prijmeni}")
-            st.write(f"**TERMÍN:** {vstup_datum} - {odjezd_str}")
-            st.write(f"**CELKOVÁ CENA:** {celkova_cena} Kč")
-            st.write(f"**INFO K TERMÍNU:** {pocasí_info}")
+            tabulka_ok = nova_rezervace.uloz_do_google_tabulky()
 
-            if not soubor_ok:
-                st.warning("⚠️ Chyba: Nepodařilo se zapsat do souboru.")
+            if tabulka_ok:
+                st.success("✅ Rezervace byla úspěšně zpracována a uložena do Google tabulky!")
+                st.write(f"**REZERVAČNÍ SYSTÉM PRO:** {novy_host.jmeno_prijmeni}")
+                st.write(f"**TERMÍN:** {vstup_datum} - {odjezd_str}")
+                st.write(f"**CELKOVÁ CENA:** {celkova_cena} Kč")
+                st.write(f"**INFO K TERMÍNU:** {pocasí_info}")
+                st.balloons()
 
         except ValueError:
             st.error("❌ Chyba: Špatný formát data. Zadejte např. 15.01.2026")
