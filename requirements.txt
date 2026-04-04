@@ -1,0 +1,4 @@
+requests
+icalevents
+streamlit
+streamlit-gsheets
