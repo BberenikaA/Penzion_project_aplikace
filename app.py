@@ -2,8 +2,11 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import datetime
 import requests
+import re
+import config
 
 st.set_page_config(page_title="Penzion pod Špičákem")
+
 st.markdown("""
     <div style='text-align: center; margin-bottom: -15px;'>
         <span style='font-size: 40px;'>🏨</span>
@@ -25,7 +28,11 @@ with st.form("rezervace_form"):
     col1, col2 = st.columns(2)
     with col1:
         osob = st.number_input("Počet osob", min_value=12, max_value=22, value=12)
-        prijezd = st.date_input("Datum příjezdu", min_value=datetime.date.today(), format="DD/MM/YYYY")
+        prijezd = st.date_input(
+            "Datum příjezdu",
+            min_value=datetime.date.today(),
+            format="DD.MM.YYYY"
+        )
     with col2:
         noci = st.number_input("Počet nocí", min_value=2, value=2)
         vip = st.checkbox("Mám věrnostní kartu")
@@ -33,12 +40,12 @@ with st.form("rezervace_form"):
     submit = st.form_submit_button("Odeslat rezervaci")
 
 if submit:
-    if not jmeno or not email or not telefon or not osob or not prijezd:
-        st.error("⚠️ Prosím, vyplňte všechna data: Jméno, Email, Telefon, Počet osob a Datum příjezdu.")
-    elif noci < 2:
-        st.error("⚠️ Minimální délka pobytu jsou 2 noci.")
-    elif osob < 12:
-        st.error("⚠️ Minimální počet osob pro rezervaci celého penzionu je 12.")
+    if not jmeno or not email or not telefon:
+        st.error("⚠️ Prosím, vyplňte všechna povinná pole (Jméno, Email a Telefon).")
+    elif not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+        st.error("⚠️ Zadejte prosím platný email.")
+    elif not telefon.isdigit() or len(telefon) < 9:
+        st.error("⚠️ Telefon musí obsahovat pouze číslice a mít alespoň 9 znaků.")
     else:
         odjezd = prijezd + datetime.timedelta(days=noci)
         cena_za_noc = osob * 450
@@ -48,7 +55,7 @@ if submit:
         if vip:
             celkova_cena *= 0.9
 
-        script_url = "https://script.google.com/macros/s/AKfycbxTTxKpenwPPZhrsFKTz8M_dryUswjrdTenzuGb83ludQUPKKI2SoF-37m26H8BQ05LSw/exec"
+        url = config.script_url
 
         params = {
             "datum": datetime.datetime.now().strftime("%d.%m.%Y %H:%M"),
@@ -64,22 +71,21 @@ if submit:
         }
 
         try:
-            response = requests.get(script_url, params=params)
+            response = requests.get(url, params=params)
             if response.status_code == 200:
-                st.success(f"✅ Rezervace potvrzena pro: {jmeno}. Cena: {int(celkova_cena)} Kč")
+                st.success(f"✅ Rezervace úspěšně odeslána pro: {jmeno}. Celková cena: {int(celkova_cena)} Kč")
                 st.balloons()
 
                 st.markdown("""
                     <a href="/" target="_self" style="text-decoration: none;">
                         <div style="background-color: #ff4b4b; color: white; padding: 10px 20px; 
-                                    border-radius: 5px; text-align: center; width: 200px; cursor: pointer;
-                                    margin-top: 10px; font-weight: bold;">
+                                    border-radius: 5px; text-align: center; width: 220px; cursor: pointer;
+                                    margin-top: 15px; font-weight: bold;">
                             Zadat další rezervaci
                         </div>
                     </a>
                 """, unsafe_allow_html=True)
-
             else:
-                st.error("Chyba při komunikaci se skriptem.")
+                st.error("Chyba při komunikaci se serverem.")
         except Exception as e:
-            st.error(f"Chyba: {e}")
+            st.error(f"Došlo k chybě: {e}")
