@@ -4,7 +4,13 @@ import datetime
 import requests
 
 st.set_page_config(page_title="Penzion pod Špičákem")
-st.header("🏨 Rezervační systém pro Penzion pod Špičákem")
+st.markdown("""
+    <h1 style='text-align: center; line-height: 1.2;'>
+        🏨 Rezervační systém<br>pro Penzion pod Špičákem
+    </h1>
+""", unsafe_allow_html=True)
+
+st.write("")
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
