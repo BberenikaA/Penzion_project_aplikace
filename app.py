@@ -5,8 +5,11 @@ import requests
 
 st.set_page_config(page_title="Penzion pod Špičákem")
 st.markdown("""
-    <h1 style='text-align: center; line-height: 1.2;'>
-        🏨 Rezervační systém<br>    Penzion pod Špičákem
+    <div style='text-align: center; margin-bottom: -15px;'>
+        <span style='font-size: 40px;'>🏨</span>
+    </div>
+    <h1 style='text-align: center; line-height: 1.1; margin-top: 0;'>
+        Rezervační systém<br>Penzion pod Špičákem
     </h1>
 """, unsafe_allow_html=True)
 
