@@ -26,9 +26,11 @@ with st.form("rezervace_form"):
 if submit:
     odjezd = prijezd + datetime.timedelta(days=noci)
     cena_za_noc = osob * 450
-    if cena_za_noc > 8000: cena_za_noc = 8000
+    if cena_za_noc > 8000:
+        cena_za_noc = 8000
     celkova_cena = cena_za_noc * noci
-    if vip: celkova_cena *= 0.9
+    if vip:
+        celkova_cena *= 0.9
 
     nova_data = pd.DataFrame([{
         "Datum vytvoření": datetime.datetime.now().strftime("%d.%m.%Y %H:%M"),
@@ -42,8 +44,12 @@ if submit:
         "Cena": f"{int(celkova_cena)} Kč"
     }])
 
-    stávající_data = conn.read(worksheet="Sheet1")
-    aktualizovaná_data = pd.concat([stávající_data, nova_data], ignore_index=True)
-    conn.update(worksheet="Sheet1", data=aktualizovaná_data)
+    try:
+        stavajici_data = conn.read()
+        aktualizovana_data = pd.concat([stavajici_data, nova_data], ignore_index=True)
+        conn.update(data=aktualizovana_data)
 
-    st.success(f"✅ Hotovo! Rezervace potvrzena. Cena: {int(celkova_cena)} Kč")
+        st.success(f"✅ Rezervace potvrzena. Cena: {int(celkova_cena)} Kč")
+        st.balloons()
+    except Exception as e:
+        st.error(f"Chyba: {e}")
