@@ -52,7 +52,16 @@ if submit:
         if response.status_code == 200:
             st.success(f"✅ Rezervace potvrzena pro: {jmeno}. Cena: {int(celkova_cena)} Kč")
             st.balloons()
-            st.button("Zadat další rezervaci", on_click=st.rerun)
+
+            st.markdown("""
+                       <a href="/" target="_self" style="text-decoration: none;">
+                           <div style="background-color: #ff4b4b; color: white; padding: 10px 20px; 
+                                       border-radius: 5px; text-align: center; width: 200px; cursor: pointer;
+                                       margin-top: 10px; font-weight: bold;">
+                               Zadat další rezervaci
+                           </div>
+                       </a>
+                   """, unsafe_allow_html=True)
 
         else:
             st.error("Chyba při komunikaci se skriptem.")
