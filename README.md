@@ -37,3 +37,4 @@ Projekt využívá soubor `.gitignore` pro vyloučení systémových a osobních
 
 ## Instalace a spuštění
 Projekt vyžaduje ke svému běhu instalaci externích knihoven viz. výše. V terminálu spusťte následující příkaz: `pip install requests icalevents`
+
