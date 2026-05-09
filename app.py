@@ -34,14 +34,15 @@ if submit:
 
     nova_data = pd.DataFrame([{
         "Datum vytvoření": datetime.datetime.now().strftime("%d.%m.%Y %H:%M"),
-        "Jméno": jmeno,
+        "Jméno a příjmení": jmeno,
         "Email": email,
         "Telefon": telefon,
-        "Příjezd": prijezd.strftime("%d.%m.%Y"),
-        "Odjezd": odjezd.strftime("%d.%m.%Y"),
-        "Osob": osob,
-        "Nocí": noci,
-        "Cena": f"{int(celkova_cena)} Kč"
+        "Počet osob": osob,
+        "Datum příjezdu": prijezd.strftime("%d.%m.%Y"),
+        "Počet nocí": noci,
+        "Věrnostní karta": "ANO" if vip else "NE",
+        "Datum odjezdu": odjezd.strftime("%d.%m.%Y"),
+        "Celková cena": f"{int(celkova_cena)} Kč"
     }])
 
     try:
@@ -49,7 +50,7 @@ if submit:
         aktualizovana_data = pd.concat([stavajici_data, nova_data], ignore_index=True)
         conn.update(data=aktualizovana_data)
 
-        st.success(f"✅ Rezervace potvrzena. Cena: {int(celkova_cena)} Kč")
+        st.success(f"✅ Rezervace potvrzena pro: {jmeno}. Cena: {int(celkova_cena)} Kč")
         st.balloons()
     except Exception as e:
         st.error(f"Chyba: {e}")
