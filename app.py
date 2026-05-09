@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import datetime
-import pandas as pd
+import requests
 
 st.set_page_config(page_title="Penzion pod Špičákem")
 st.header("🏨 Rezervační systém pro Penzion pod Špičákem")
@@ -32,25 +32,27 @@ if submit:
     if vip:
         celkova_cena *= 0.9
 
-    nova_data = pd.DataFrame([{
-        "Datum vytvoření": datetime.datetime.now().strftime("%d.%m.%Y %H:%M"),
-        "Jméno a příjmení": jmeno,
-        "Email": email,
-        "Telefon": telefon,
-        "Počet osob": osob,
-        "Datum příjezdu": prijezd.strftime("%d.%m.%Y"),
-        "Počet nocí": noci,
-        "Věrnostní karta": "ANO" if vip else "NE",
-        "Datum odjezdu": odjezd.strftime("%d.%m.%Y"),
-        "Celková cena": f"{int(celkova_cena)} Kč"
-    }])
+    script_url = "https://script.google.com/macros/s/AKfycbxTTxKpenwPPZhrsFKTz8M_dryUswjrdTenzuGb83ludQUPKKI2SoF-37m26H8BQ05LSw/exec"
+
+    params = {
+        "datum": datetime.datetime.now().strftime("%d.%m.%Y %H:%M"),
+        "jmeno": jmeno,
+        "email": email,
+        "telefon": telefon,
+        "osob": osob,
+        "prijezd": prijezd.strftime("%d.%m.%Y"),
+        "noci": noci,
+        "vip": "ANO" if vip else "NE",
+        "odjezd": odjezd.strftime("%d.%m.%Y"),
+        "cena": f"{int(celkova_cena)} Kč"
+    }
 
     try:
-        stavajici_data = conn.read()
-        aktualizovana_data = pd.concat([stavajici_data, nova_data], ignore_index=True)
-        conn.update(data=aktualizovana_data)
-
-        st.success(f"✅ Rezervace potvrzena pro: {jmeno}. Cena: {int(celkova_cena)} Kč")
-        st.balloons()
+        response = requests.get(script_url, params=params)
+        if response.status_code == 200:
+            st.success(f"✅ Rezervace potvrzena pro: {jmeno}. Cena: {int(celkova_cena)} Kč")
+            st.balloons()
+        else:
+            st.error("Chyba při komunikaci se skriptem.")
     except Exception as e:
         st.error(f"Chyba: {e}")

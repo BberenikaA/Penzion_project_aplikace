@@ -38,3 +38,17 @@ Projekt využívá soubor `.gitignore` pro vyloučení systémových a osobních
 ## Instalace a spuštění
 Projekt vyžaduje ke svému běhu instalaci externích knihoven viz. výše. V terminálu spusťte následující příkaz: `pip install requests icalevents`
 
+## Aktualizace projektu (Propojení s tabulkou)
+Propojení přes **Google Apps Script**.
+
+### Novinky v kódu:
+- Knihovna **Requests:** je využívána pro zápis dat do tabulky ve spojení s **Google Apps Script**.
+- **Google Apps Script:** Funkce `doGet(e)` přijímá data z aplikace a zapisuje je do prvního volného řádku v tabulce.
+- **Bezpečnost:** Data jsou odesílána na soukromý endpoint (Web App URL) běžící v rámci Google.
+- **Stabilita** Výše uvedený systém obchází knihovny `st-gsheets-connection` a umožňuje zápis dat i bez aktivace placených služeb v Google Cloud Console.
+
+### Jak to funguje nyní:
+1. Uživatel odešle formulář.
+2. Streamlit vytvoří balíček dat (params).
+3. Pomocí `requests.get` se data pošlou do Google Apps Scriptu.
+4. Skript provede zápis do Google Tabulky.
