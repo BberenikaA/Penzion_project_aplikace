@@ -52,6 +52,8 @@ if submit:
         if response.status_code == 200:
             st.success(f"✅ Rezervace potvrzena pro: {jmeno}. Cena: {int(celkova_cena)} Kč")
             st.balloons()
+            st.button("Zadat další rezervaci", on_click=st.rerun)
+
         else:
             st.error("Chyba při komunikaci se skriptem.")
     except Exception as e:
