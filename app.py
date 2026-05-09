@@ -6,7 +6,7 @@ import requests
 st.set_page_config(page_title="Penzion pod Špičákem")
 st.markdown("""
     <h1 style='text-align: center; line-height: 1.2;'>
-        🏨 Rezervační systém<br>pro Penzion pod Špičákem
+        🏨 Rezervační systém<br>Penzion pod Špičákem
     </h1>
 """, unsafe_allow_html=True)
 
