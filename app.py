@@ -16,7 +16,7 @@ with st.form("rezervace_form"):
     col1, col2 = st.columns(2)
     with col1:
         osob = st.number_input("Počet osob", min_value=12, max_value=22, value=12)
-        prijezd = st.date_input("Datum příjezdu", min_value=datetime.date.today())
+        prijezd = st.date_input("Datum příjezdu", min_value=datetime.date.today(), format="DD/MM/YYYY")
     with col2:
         noci = st.number_input("Počet nocí", min_value=2, value=2)
         vip = st.checkbox("Mám věrnostní kartu")

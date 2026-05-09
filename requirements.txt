@@ -2,4 +2,3 @@ streamlit
 st-gsheets-connection
 requests
 icalevents
-
