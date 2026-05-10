@@ -5,57 +5,98 @@ import re
 import config
 
 
-def zapis_do_google_tabulky(data_dict):
+def zkontroluj_obsazenost_online():
     try:
-        url = st.secrets["script_url"]
-        response = requests.get(url, params=data_dict, timeout=10)
-        return response.status_code == 200
+        url = st.secrets["moje_tajne_odkazy"]["url_obsazenost"]
+        odpoved = requests.get(url, timeout=5)
+        if odpoved.status_code == 200:
+            return "✅ OK (Synchronizace s e-chalupy.cz je aktivní)"
+        return "❌ Problém s připojením k e-chalupy"
     except:
-        return False
+        return "🌐 Služba obsazenosti nedostupná"
 
 
-def ziskej_info():
+def ziskej_info_o_pobytu(datum_prijezdu_str):
     try:
+        prijezd_dt = datetime.datetime.strptime(datum_prijezdu_str, "%d.%m.%Y")
+        mesic = prijezd_dt.month
+
+        if mesic in [12, 1, 2]:
+            sezona, tipy = "ZIMA ❄️", "lyže (Špičák), brusle a běžky"
+        elif mesic in [6, 7, 8]:
+            sezona, tipy = "LÉTO ☀️", "kolo, koupání v bazéně, v Jizeře"
+        elif mesic in [3, 4, 5]:
+            sezona, tipy = "JARO 🌱", "procházky a cykloturistika"
+        else:
+            sezona, tipy = "PODZIM 🍂", "houbaření a podzimní výšlapy"
+
         url_pocasi = st.secrets["moje_tajne_odkazy"]["api_pocasi"]
-        res = requests.get(url_pocasi).json()
-        teplota = res['current_weather']['temperature']
-        return f"Aktuálně je v Tanvaldu {teplota}°C."
+        odpoved = requests.get(url_pocasi, timeout=5).json()
+        teplota = odpoved['current_weather']['temperature']
+        return f"{sezona} (aktuálně v Tanvaldu {teplota}°C). Doporučujeme: {tipy}."
     except:
-        return "Vítejte v Penzionu pod Špičákem!"
+        return "Tanvald je krásný v každém počasí.😉"
 
 
 st.set_page_config(page_title="Penzion pod Špičákem")
-st.title("Rezervační systém")
+
+st.markdown("""
+    <div style='text-align: center; margin-bottom: -15px;'>
+        <span style='font-size: 40px;'>🏨</span>
+    </div>
+    <h1 style='text-align: center; line-height: 1.1; margin-top: 0;'>
+        Rezervační systém<br>Penzion pod Špičákem
+    </h1>
+""", unsafe_allow_html=True)
 
 if 'success' not in st.session_state:
     st.session_state.success = False
 
-if not st.session_state.success:
-    with st.form("rezervace_form"):
+if st.session_state.success:
+    st.success(f"✅ Rezervace potvrzena pro: {st.session_state.last_jmeno}!")
+    st.info(f"💰 Celková cena: {st.session_state.last_cena} Kč")
+    st.write(f"📊 {zkontroluj_obsazenost_online()}")
+    st.write(f"🌦️ {ziskej_info_o_pobytu(st.session_state.last_prijezd)}")
+    st.balloons()
+
+    if st.button("Zadat další rezervaci"):
+        st.session_state.success = False
+        st.rerun()
+
+else:
+    with st.form("rezervace_form", clear_on_submit=False):
         jmeno = st.text_input("Jméno a příjmení")
         email = st.text_input("Email")
         telefon = st.text_input("Telefon")
-        osob = st.number_input("Počet osob", config.MIN_KAPACITA, config.MAX_KAPACITA)
-        prijezd = st.date_input("Datum příjezdu", min_value=datetime.date.today())
-        noci = st.number_input("Počet nocí", min_value=config.MIN_NOCI)
-        is_vip = st.checkbox("Mám věrnostní kartu")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            osob = st.number_input("Počet osob", config.MIN_KAPACITA, config.MAX_KAPACITA, config.MIN_KAPACITA)
+            prijezd = st.date_input("Datum příjezdu", min_value=datetime.date.today(), format="DD.MM.YYYY")
+        with col2:
+            noci = st.number_input("Počet nocí", min_value=config.MIN_NOCI, value=config.MIN_NOCI)
+            is_vip = st.checkbox("Mám věrnostní kartu")
+            cislo_karty = st.text_input("Číslo karty (volitelné)")
 
         submit = st.form_submit_button("Odeslat rezervaci")
 
     if submit:
-        if not jmeno or not email or "@" not in email:
-            st.error("⚠️ Prosím vyplňte jméno a platný email.")
-        elif not telefon.isdigit() or len(telefon) < 9:
-            st.error("⚠️ Zadejte platný telefonní kontakt (pouze číslice).")
+        email_vzor = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
+
+        if not jmeno:
+            st.error("⚠️ Vyplňte prosím jméno.")
+        elif not re.match(email_vzor, email):
+            st.error("⚠️ Zadejte prosím platný email.")
         else:
             cena_za_noc = min(osob * config.CENA_ZA_OSOBU_NOC, config.MAX_CENA_ZA_OBJEKT_NOC)
             celkova_cena = int(cena_za_noc * noci * (0.9 if is_vip else 1.0))
 
             prijezd_str = prijezd.strftime("%d.%m.%Y")
             odjezd_str = (prijezd + datetime.timedelta(days=noci)).strftime("%d.%m.%Y")
+            vytvoreno = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
 
-            data_pro_tabulku = {
-                "datum": datetime.datetime.now().strftime("%d.%m.%Y %H:%M"),
+            params = {
+                "datum": vytvoreno,
                 "jmeno": jmeno,
                 "email": email,
                 "telefon": telefon,
@@ -67,20 +108,19 @@ if not st.session_state.success:
                 "cena": f"{celkova_cena} Kč"
             }
 
-            if zapis_do_google_tabulky(data_pro_tabulku):
-                st.session_state.success = True
-                st.session_state.vysledek = {"jmeno": jmeno, "cena": celkova_cena}
-                st.rerun()
-            else:
-                st.error("❌ Nepodařilo se zapsat do tabulky. Zkontrolujte script_url v Secrets.")
+            try:
+                url_tabulka = st.secrets["script_url"]
+                res = requests.get(url_tabulka, params=params, timeout=10)
 
-else:
-    st.success(f"✅ Rezervace pro {st.session_state.vysledek['jmeno']} byla úspěšně uložena!")
-    st.info(f"💰 Celková cena: {st.session_state.vysledek['cena']} Kč")
-    st.write(ziskej_info())
-    st.balloons()
+                if res.status_code == 200:
+                    st.session_state.last_jmeno = jmeno
+                    st.session_state.last_cena = celkova_cena
+                    st.session_state.last_prijezd = prijezd_str
+                    st.session_state.success = True
+                    st.rerun()
+                else:
+                    st.error(f"❌ Chyba zápisu (Kód {res.status_code}).")
+            except Exception as e:
+                st.error(f"❌ Došlo k chybě připojení: {e}")
 
-    if st.button("Zadat novou rezervaci"):
-        st.session_state.success = False
-        st.rerun()
 

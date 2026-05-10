@@ -1,6 +1,5 @@
 URL_OBSAZENOST = "https://www.e-chalupy.cz/api/calendar/5378/22A565/echalupy.ics"
 API_WEATHER_URL = "https://api.open-meteo.com/v1/forecast?latitude=50.7383&longitude=15.3082&current_weather=true"
-script_url = "https://script.google.com/macros/s/AKfycbw_Q_99NS6u0IG00qge4GWkmrV3af6QXrANRsbSbXrZFWLvdPekn9hxcc9hhRoyakREsw/exec"
 
 CENA_ZA_OSOBU_NOC = 450
 MAX_CENA_ZA_OBJEKT_NOC = 8000
