@@ -7,7 +7,8 @@ import config
 
 def zkontroluj_obsazenost_online():
     try:
-        odpoved = requests.get(config.URL_OBSAZENOST, timeout=5)
+        url = st.secrets["moje_tajne_odkazy"]["url_obsazenost"]
+        odpoved = requests.get(url, timeout=5)
         if odpoved.status_code == 200:
             return "✅ OK (Synchronizace s e-chalupy.cz je aktivní)"
         else:
@@ -29,7 +30,9 @@ def ziskej_info_o_pobytu(datum_prijezdu_str):
         else:
             sezona, tipy = "PODZIM 🍂", "houbaření a podzimní výšlapy"
 
-        odpoved = requests.get(config.API_WEATHER_URL, timeout=5).json()
+        url_pocasi = st.secrets["moje_tajne_odkazy"]["api_pocasi"]
+        odpoved = requests.get(url_pocasi, timeout=5).json()
+
         if 'current_weather' in odpoved:
             teplota = odpoved['current_weather']['temperature']
             return f"{sezona} (aktuálně v Tanvaldu {teplota}°C). Doporučujeme: {tipy}."
@@ -86,13 +89,11 @@ st.markdown("""
     </h1>
 """, unsafe_allow_html=True)
 
-st.write("")
-
 if 'success' not in st.session_state:
     st.session_state.success = False
 
 if not st.session_state.success:
-    with st.form("rezervace_form", clear_on_submit=True):
+    with st.form("rezervace_form", clear_on_submit=False):
         jmeno = st.text_input("Jméno a příjmení")
         email = st.text_input("Email")
         telefon = st.text_input("Telefon (pouze číslice)")
@@ -141,7 +142,13 @@ if not st.session_state.success:
             }
 
             try:
-                res = requests.get(config.script_url, params=params)
+                if "script_url" in st.secrets:
+                    url_zapis = st.secrets["script_url"]
+                else:
+                    url_zapis = config.script_url
+
+                res = requests.get(url_zapis, params=params, timeout=10)
+
                 if res.status_code == 200:
                     st.session_state.success = True
                     st.session_state.last_host = host.jmeno_prijmeni
@@ -149,7 +156,7 @@ if not st.session_state.success:
                     st.session_state.last_arrival = prijezd_str
                     st.rerun()
                 else:
-                    st.error("Chyba při zápisu do tabulky.")
+                    st.error(f"Chyba při zápisu: Server odpověděl kódem {res.status_code}")
             except Exception as e:
                 st.error(f"Došlo k chybě: {e}")
 
@@ -160,6 +167,6 @@ else:
     st.info(f"🌦️ Info k pobytu: {ziskej_info_o_pobytu(st.session_state.last_arrival)}")
     st.balloons()
 
-    if st.button("Nová rezervace"):
+    if st.button("Zadat novou rezervaci"):
         st.session_state.success = False
         st.rerun()
