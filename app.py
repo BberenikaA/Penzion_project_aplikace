@@ -85,6 +85,7 @@ else:
             odjezd_str = (prijezd + datetime.timedelta(days=noci)).strftime("%d.%m.%Y")
             vytvoreno = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
 
+            # TADY JE TA OPRAVA: Názvy klíčů musí odpovídat tvému Apps Scriptu
             params = {
                 "datum": vytvoreno,
                 "jmeno": jmeno,
@@ -99,12 +100,10 @@ else:
             }
 
             try:
-                # Načtení odkazu přímo ze Secrets
                 url_tabulka = st.secrets["script_url"]
-                # Odeslání požadavku s povoleným přesměrováním
+                # allow_redirects=True je klíčové pro Google Scripty
                 res = requests.get(url_tabulka, params=params, timeout=15, allow_redirects=True)
 
-                # Kontrola, zda se zápis povedl
                 if res.status_code == 200:
                     st.session_state.last_jmeno = jmeno
                     st.session_state.last_cena = celkova_cena
@@ -112,9 +111,10 @@ else:
                     st.session_state.success = True
                     st.rerun()
                 else:
-                    st.error(f"❌ Chyba spojení s tabulkou (Kód: {res.status_code})")
+                    st.error(f"❌ Tabulka vrátila chybu {res.status_code}")
             except Exception as e:
-                st.error(f"❌ Chyba: {e}")
+                st.error(f"❌ Chyba spojení: {e}")
+
 
 
 
