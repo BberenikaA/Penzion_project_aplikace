@@ -5,6 +5,8 @@ import re
 import config
 
 
+# --- PŮVODNÍ FUNKCE (Počasí a Obsazenost) ---
+
 def zkontroluj_obsazenost_online():
     try:
         odpoved = requests.get(config.URL_OBSAZENOST, timeout=5)
@@ -37,6 +39,8 @@ def ziskej_info_o_pobytu(datum_prijezdu_str):
     except Exception:
         return "Tanvald je krásný v každém počasí.😉"
 
+
+# --- TŘÍDY (Objektově orientované programování) ---
 
 class Host:
     def __init__(self, jmeno_prijmeni, email, telefon):
@@ -75,6 +79,8 @@ class Rezervace:
         return int(zakladni_cena - sleva)
 
 
+# --- STREAMLIT ROZHRANÍ ---
+
 st.set_page_config(page_title="Penzion pod Špičákem")
 
 st.markdown("""
@@ -103,6 +109,8 @@ with st.form("rezervace_form"):
         cislo_karty = st.text_input("Číslo karty (pokud máte)")
 
     submit = st.form_submit_button("Odeslat rezervaci")
+
+# --- LOGIKA PO ODESLÁNÍ ---
 
 if submit:
     if not jmeno or not email or not telefon:
@@ -145,16 +153,10 @@ if submit:
                 st.info(f"🌦️ Info k pobytu: {ziskej_info_o_pobytu(prijezd_str)}")
                 st.balloons()
 
-                st.markdown("""
-                    <a href="/" target="_self" style="text-decoration: none;">
-                        <div style="background-color: #ff4b4b; color: white; padding: 10px 20px; 
-                                    border-radius: 5px; text-align: center; width: 220px; cursor: pointer;
-                                    margin-top: 15px; font-weight: bold;">
-                            Zadat další rezervaci
-                        </div>
-                    </a>
-                """, unsafe_allow_html=True)
+                # Funkční tlačítko pro novou rezervaci
+                if st.button("Zadat další rezervaci"):
+                    st.rerun()
             else:
                 st.error("Chyba při zápisu do tabulky.")
         except Exception as e:
-            st.error(f"Došlo k chybě při odesílání: {e}")
+            st.error(f"Došlo k chybě: {e}")
