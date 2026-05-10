@@ -4,6 +4,7 @@ import requests
 import re
 import config
 
+
 def zkontroluj_obsazenost_online():
     try:
         url = st.secrets["moje_tajne_odkazy"]["url_obsazenost"]
@@ -14,20 +15,26 @@ def zkontroluj_obsazenost_online():
     except:
         return "🌐 Služba obsazenosti nedostupná"
 
+
 def ziskej_info_o_pobytu(datum_prijezdu_str):
     try:
         prijezd_dt = datetime.datetime.strptime(datum_prijezdu_str, "%d.%m.%Y")
         mesic = prijezd_dt.month
-        if mesic in [12, 1, 2]: sezona, tipy = "ZIMA ❄️", "lyže (Špičák), brusle a běžky"
-        elif mesic in [6, 7, 8]: sezona, tipy = "LÉTO ☀️", "kolo, koupání v bazéně, v Jizeře"
-        elif mesic in [3, 4, 5]: sezona, tipy = "JARO 🌱", "procházky a cykloturistika"
-        else: sezona, tipy = "PODZIM 🍂", "houbaření a podzimní výšlapy"
+        if mesic in [12, 1, 2]:
+            sezona, tipy = "ZIMA ❄️", "lyže (Špičák), brusle a běžky"
+        elif mesic in [6, 7, 8]:
+            sezona, tipy = "LÉTO ☀️", "kolo, koupání v bazéně, v Jizeře"
+        elif mesic in [3, 4, 5]:
+            sezona, tipy = "JARO 🌱", "procházky a cykloturistika"
+        else:
+            sezona, tipy = "PODZIM 🍂", "houbaření a výšlapy"
         url_pocasi = st.secrets["moje_tajne_odkazy"]["api_pocasi"]
         odpoved = requests.get(url_pocasi, timeout=5).json()
         teplota = odpoved['current_weather']['temperature']
         return f"{sezona} (aktuálně v Tanvaldu {teplota}°C). Doporučujeme: {tipy}."
     except:
         return "Tanvald je krásný v každém počasí.😉"
+
 
 st.set_page_config(page_title="Penzion pod Špičákem")
 
@@ -56,7 +63,7 @@ else:
     with st.form("rezervace_form", clear_on_submit=False):
         jmeno = st.text_input("Jméno a příjmení")
         email = st.text_input("Email")
-        telefon = st.text_input("Telefon (pouze číslice)")
+        telefon = st.text_input("Telefon")
         col1, col2 = st.columns(2)
         with col1:
             osob = st.number_input("Počet osob", config.MIN_KAPACITA, config.MAX_KAPACITA, config.MIN_KAPACITA)
@@ -69,10 +76,8 @@ else:
 
     if submit:
         email_vzor = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-        if not jmeno:
-            st.error("⚠️ Vyplňte prosím jméno.")
-        elif not re.match(email_vzor, email):
-            st.error("⚠️ Zadejte prosím platný email.")
+        if not jmeno or not re.match(email_vzor, email):
+            st.error("⚠️ Vyplňte prosím správně jméno a email.")
         else:
             cena_za_noc = min(osob * config.CENA_ZA_OSOBU_NOC, config.MAX_CENA_ZA_OBJEKT_NOC)
             celkova_cena = int(cena_za_noc * noci * (0.9 if is_vip else 1.0))
@@ -94,9 +99,12 @@ else:
             }
 
             try:
-                # Tady se volá script_url ze Secrets (fotka fc846f75...)
+                # Načtení odkazu přímo ze Secrets
                 url_tabulka = st.secrets["script_url"]
-                res = requests.get(url_tabulka, params=params, timeout=10)
+                # Odeslání požadavku s povoleným přesměrováním
+                res = requests.get(url_tabulka, params=params, timeout=15, allow_redirects=True)
+
+                # Kontrola, zda se zápis povedl
                 if res.status_code == 200:
                     st.session_state.last_jmeno = jmeno
                     st.session_state.last_cena = celkova_cena
@@ -104,8 +112,9 @@ else:
                     st.session_state.success = True
                     st.rerun()
                 else:
-                    st.error(f"❌ Chyba zápisu (Kód {res.status_code}).")
+                    st.error(f"❌ Chyba spojení s tabulkou (Kód: {res.status_code})")
             except Exception as e:
-                st.error(f"❌ Došlo k chybě připojení: {e}")
+                st.error(f"❌ Chyba: {e}")
+
 
 
