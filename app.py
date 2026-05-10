@@ -5,8 +5,6 @@ import re
 import config
 
 
-# --- PŮVODNÍ FUNKCE (Počasí a Obsazenost) ---
-
 def zkontroluj_obsazenost_online():
     try:
         odpoved = requests.get(config.URL_OBSAZENOST, timeout=5)
@@ -39,8 +37,6 @@ def ziskej_info_o_pobytu(datum_prijezdu_str):
     except Exception:
         return "Tanvald je krásný v každém počasí.😉"
 
-
-# --- TŘÍDY (Objektově orientované programování) ---
 
 class Host:
     def __init__(self, jmeno_prijmeni, email, telefon):
@@ -79,8 +75,6 @@ class Rezervace:
         return int(zakladni_cena - sleva)
 
 
-# --- STREAMLIT ROZHRANÍ ---
-
 st.set_page_config(page_title="Penzion pod Špičákem")
 
 st.markdown("""
@@ -94,69 +88,79 @@ st.markdown("""
 
 st.write("")
 
-with st.form("rezervace_form"):
-    jmeno = st.text_input("Jméno a příjmení")
-    email = st.text_input("Email")
-    telefon = st.text_input("Telefon (pouze číslice)")
+# Inicializace stavu pro schování formuláře po úspěchu
+if 'success' not in st.session_state:
+    st.session_state.success = False
 
-    col1, col2 = st.columns(2)
-    with col1:
-        osob = st.number_input("Počet osob", config.MIN_KAPACITA, config.MAX_KAPACITA, config.MIN_KAPACITA)
-        prijezd = st.date_input("Datum příjezdu", min_value=datetime.date.today(), format="DD.MM.YYYY")
-    with col2:
-        noci = st.number_input("Počet nocí", min_value=config.MIN_NOCI, value=config.MIN_NOCI)
-        is_vip = st.checkbox("Mám věrnostní kartu")
-        cislo_karty = st.text_input("Číslo karty (pokud máte)")
+if not st.session_state.success:
+    with st.form("rezervace_form", clear_on_submit=True):
+        jmeno = st.text_input("Jméno a příjmení")
+        email = st.text_input("Email")
+        telefon = st.text_input("Telefon (pouze číslice)")
 
-    submit = st.form_submit_button("Odeslat rezervaci")
+        col1, col2 = st.columns(2)
+        with col1:
+            osob = st.number_input("Počet osob", config.MIN_KAPACITA, config.MAX_KAPACITA, config.MIN_KAPACITA)
+            prijezd = st.date_input("Datum příjezdu", min_value=datetime.date.today(), format="DD.MM.YYYY")
+        with col2:
+            noci = st.number_input("Počet nocí", min_value=config.MIN_NOCI, value=config.MIN_NOCI)
+            is_vip = st.checkbox("Mám věrnostní kartu")
+            cislo_karty = st.text_input("Číslo karty (pokud máte)")
 
-# --- LOGIKA PO ODESLÁNÍ ---
+        submit = st.form_submit_button("Odeslat rezervaci")
 
-if submit:
-    if not jmeno or not email or not telefon:
-        st.error("⚠️ Prosím, vyplňte všechna povinná pole (Jméno, Email a Telefon).")
-    elif not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-        st.error("⚠️ Zadejte prosím platný email.")
-    elif not telefon.isdigit() or len(telefon) < 9:
-        st.error("⚠️ Telefon musí obsahovat pouze číslice a mít alespoň 9 znaků.")
-    else:
-        if is_vip:
-            host = Verny_host(jmeno, email, telefon, cislo_karty)
+    if submit:
+        if not jmeno or not email or not telefon:
+            st.error("⚠️ Prosím, vyplňte všechna povinná pole.")
+        elif not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            st.error("⚠️ Zadejte prosím platný email.")
+        elif not telefon.isdigit() or len(telefon) < 9:
+            st.error("⚠️ Telefon musí mít alespoň 9 číslic.")
         else:
-            host = Host(jmeno, email, telefon)
-
-        prijezd_str = prijezd.strftime("%d.%m.%Y")
-        odjezd_str = (prijezd + datetime.timedelta(days=noci)).strftime("%d.%m.%Y")
-
-        rez = Rezervace(host, osob, noci, prijezd_str, odjezd_str)
-        celkova_cena = rez.vypocti_celkovou_cenu()
-
-        params = {
-            "datum": rez.datum_vytvoreni,
-            "jmeno": host.jmeno_prijmeni,
-            "email": host.email,
-            "telefon": host.telefon,
-            "osob": rez.pocet_osob,
-            "prijezd": rez.datum_prijezdu,
-            "noci": rez.pocet_noci,
-            "vip": "ANO" if is_vip else "NE",
-            "odjezd": rez.datum_odjezdu,
-            "cena": f"{celkova_cena} Kč"
-        }
-
-        try:
-            res = requests.get(config.script_url, params=params)
-            if res.status_code == 200:
-                st.success(f"✅ Rezervace potvrzena pro: {host.jmeno_prijmeni}!")
-                st.info(f"💰 Celková cena: {celkova_cena} Kč")
-                st.info(f"📊 Stav obsazenosti: {zkontroluj_obsazenost_online()}")
-                st.info(f"🌦️ Info k pobytu: {ziskej_info_o_pobytu(prijezd_str)}")
-                st.balloons()
-
-                # Funkční tlačítko pro novou rezervaci
-                if st.button("Zadat další rezervaci"):
-                    st.rerun()
+            if is_vip:
+                host = Verny_host(jmeno, email, telefon, cislo_karty)
             else:
-                st.error("Chyba při zápisu do tabulky.")
-        except Exception as e:
-            st.error(f"Došlo k chybě: {e}")
+                host = Host(jmeno, email, telefon)
+
+            prijezd_str = prijezd.strftime("%d.%m.%Y")
+            odjezd_str = (prijezd + datetime.timedelta(days=noci)).strftime("%d.%m.%Y")
+
+            rez = Rezervace(host, osob, noci, prijezd_str, odjezd_str)
+            celkova_cena = rez.vypocti_celkovou_cenu()
+
+            params = {
+                "datum": rez.datum_vytvoreni,
+                "jmeno": host.jmeno_prijmeni,
+                "email": host.email,
+                "telefon": host.telefon,
+                "osob": rez.pocet_osob,
+                "prijezd": rez.datum_prijezdu,
+                "noci": rez.pocet_noci,
+                "vip": "ANO" if is_vip else "NE",
+                "odjezd": rez.datum_odjezdu,
+                "cena": f"{celkova_cena} Kč"
+            }
+
+            try:
+                res = requests.get(config.script_url, params=params)
+                if res.status_code == 200:
+                    st.session_state.success = True
+                    st.session_state.last_host = host.jmeno_prijmeni
+                    st.session_state.last_price = celkova_cena
+                    st.session_state.last_arrival = prijezd_str
+                    st.rerun()
+                else:
+                    st.error("Chyba při zápisu do tabulky.")
+            except Exception as e:
+                st.error(f"Došlo k chybě: {e}")
+
+else:
+    st.success(f"✅ Rezervace potvrzena pro: {st.session_state.last_host}!")
+    st.info(f"💰 Celková cena: {st.session_state.last_price} Kč")
+    st.info(f"📊 Stav obsazenosti: {zkontroluj_obsazenost_online()}")
+    st.info(f"🌦️ Info k pobytu: {ziskej_info_o_pobytu(st.session_state.last_arrival)}")
+    st.balloons()
+
+    if st.button("Zadat novou rezervaci (vyčistit formulář)"):
+        st.session_state.success = False
+        st.rerun()
