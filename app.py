@@ -32,50 +32,12 @@ def ziskej_info_o_pobytu(datum_prijezdu_str):
 
         url_pocasi = st.secrets["moje_tajne_odkazy"]["api_pocasi"]
         odpoved = requests.get(url_pocasi, timeout=5).json()
-
         if 'current_weather' in odpoved:
             teplota = odpoved['current_weather']['temperature']
             return f"{sezona} (aktuálně v Tanvaldu {teplota}°C). Doporučujeme: {tipy}."
         return f"{sezona}. Doporučujeme: {tipy}."
     except Exception:
         return "Tanvald je krásný v každém počasí.😉"
-
-
-class Host:
-    def __init__(self, jmeno_prijmeni, email, telefon):
-        self.jmeno_prijmeni = jmeno_prijmeni
-        self.email = email
-        self.telefon = telefon
-
-    def ziskej_slevu(self):
-        return 0
-
-
-class Verny_host(Host):
-    def __init__(self, jmeno_prijmeni, email, telefon, cislo_karty):
-        super().__init__(jmeno_prijmeni, email, telefon)
-        self.cislo_karty = cislo_karty
-
-    def ziskej_slevu(self):
-        return 0.10
-
-
-class Rezervace:
-    def __init__(self, host, pocet_osob, pocet_noci, datum_prijezdu, datum_odjezdu):
-        self.host = host
-        self.pocet_osob = pocet_osob
-        self.pocet_noci = pocet_noci
-        self.datum_prijezdu = datum_prijezdu
-        self.datum_odjezdu = datum_odjezdu
-        self.datum_vytvoreni = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
-
-    def vypocti_celkovou_cenu(self):
-        cena_za_noc = self.pocet_osob * config.CENA_ZA_OSOBU_NOC
-        if cena_za_noc > config.MAX_CENA_ZA_OBJEKT_NOC:
-            cena_za_noc = config.MAX_CENA_ZA_OBJEKT_NOC
-        zakladni_cena = cena_za_noc * self.pocet_noci
-        sleva = zakladni_cena * self.host.ziskej_slevu()
-        return int(zakladni_cena - sleva)
 
 
 st.set_page_config(page_title="Penzion pod Špičákem")
@@ -113,52 +75,48 @@ if not st.session_state.success:
         if not jmeno or not email or not telefon:
             st.error("⚠️ Prosím, vyplňte všechna povinná pole.")
         elif not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-            st.error("⚠️ Zadejte prosím platný email.")
+            st.error("⚠️ Zadejte prosím platný email (např. jmeno@seznam.cz).")
         elif not telefon.isdigit() or len(telefon) < 9:
             st.error("⚠️ Telefon musí mít alespoň 9 číslic.")
         else:
-            if is_vip:
-                host = Verny_host(jmeno, email, telefon, cislo_karty)
-            else:
-                host = Host(jmeno, email, telefon)
+            cena_za_noc = osob * config.CENA_ZA_OSOBU_NOC
+            if cena_za_noc > config.MAX_CENA_ZA_OBJEKT_NOC:
+                cena_za_noc = config.MAX_CENA_ZA_OBJEKT_NOC
+
+            zakladni_cena = cena_za_noc * noci
+            sleva = 0.10 if is_vip else 0.0
+            celkova_cena = int(zakladni_cena * (1 - sleva))
 
             prijezd_str = prijezd.strftime("%d.%m.%Y")
             odjezd_str = (prijezd + datetime.timedelta(days=noci)).strftime("%d.%m.%Y")
 
-            rez = Rezervace(host, osob, noci, prijezd_str, odjezd_str)
-            celkova_cena = rez.vypocti_celkovou_cenu()
-
             params = {
-                "datum": rez.datum_vytvoreni,
-                "jmeno": host.jmeno_prijmeni,
-                "email": host.email,
-                "telefon": host.telefon,
-                "osob": rez.pocet_osob,
-                "prijezd": rez.datum_prijezdu,
-                "noci": rez.pocet_noci,
+                "datum": datetime.datetime.now().strftime("%d.%m.%Y %H:%M"),
+                "jmeno": jmeno,
+                "email": email,
+                "telefon": telefon,
+                "osob": osob,
+                "prijezd": prijezd_str,
+                "noci": noci,
                 "vip": "ANO" if is_vip else "NE",
-                "odjezd": rez.datum_odjezdu,
+                "odjezd": odjezd_str,
                 "cena": f"{celkova_cena} Kč"
             }
 
             try:
-                if "script_url" in st.secrets:
-                    url_zapis = st.secrets["script_url"]
-                else:
-                    url_zapis = config.script_url
-
+                url_zapis = st.secrets["script_url"]
                 res = requests.get(url_zapis, params=params, timeout=10)
 
                 if res.status_code == 200:
                     st.session_state.success = True
-                    st.session_state.last_host = host.jmeno_prijmeni
+                    st.session_state.last_host = jmeno
                     st.session_state.last_price = celkova_cena
                     st.session_state.last_arrival = prijezd_str
                     st.rerun()
                 else:
-                    st.error(f"Chyba při zápisu: Server odpověděl kódem {res.status_code}")
+                    st.error(f"❌ Chyba při zápisu: Server odpověděl kódem {res.status_code}")
             except Exception as e:
-                st.error(f"Došlo k chybě: {e}")
+                st.error(f"❌ Došlo k chybě připojení: {e}")
 
 else:
     st.success(f"✅ Rezervace potvrzena pro: {st.session_state.last_host}!")
