@@ -170,3 +170,4 @@ else:
     if st.button("Zadat novou rezervaci"):
         st.session_state.success = False
         st.rerun()
+

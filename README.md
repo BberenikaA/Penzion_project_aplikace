@@ -53,4 +53,3 @@ Propojení přes **Google Apps Script**.
 3. Pomocí `requests.get` se data pošlou do Google Apps Scriptu.
 4. Skript provede zápis do Google Tabulky.
 
-
