@@ -88,7 +88,6 @@ st.markdown("""
 
 st.write("")
 
-# Inicializace stavu pro schování formuláře po úspěchu
 if 'success' not in st.session_state:
     st.session_state.success = False
 
@@ -161,6 +160,6 @@ else:
     st.info(f"🌦️ Info k pobytu: {ziskej_info_o_pobytu(st.session_state.last_arrival)}")
     st.balloons()
 
-    if st.button("Zadat novou rezervaci (vyčistit formulář)"):
+    if st.button("Nová rezervace"):
         st.session_state.success = False
         st.rerun()
